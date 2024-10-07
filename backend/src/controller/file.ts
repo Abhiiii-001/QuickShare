@@ -2,6 +2,7 @@ import { Request , Response } from "express";
 import uploadToCloudinary from "../utils/cloudinaryUploader";
 import { v2 as cloudinary } from "cloudinary";
 import { PrismaClient } from "@prisma/client";
+import fs from 'fs'
 
 // Upload endpoint
 
@@ -19,6 +20,7 @@ export const uploadFile = async(req:any,res: any) => {
         
         const result = await uploadToCloudinary(file,'my-files',duration);
         console.log("Upload file response :",result);
+        fs.unlinkSync(file.tempFilePath);  // Remove file from local storage
         
 
         const prisma = new PrismaClient();
@@ -64,8 +66,16 @@ export const getFile = async(req:any,res:any) => {
         const result = await prisma.file.findFirst({
             where:{
                 id:fileId,
+                active:true
             },
         });
+
+        if(!result){
+            return res.status(404).json({
+                success:false,
+                message:"File not found or may be deleted!"
+            })
+        }
 
         console.log(result);
         return res.status(200).json({
